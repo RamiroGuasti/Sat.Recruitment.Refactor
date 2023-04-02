@@ -1,202 +1,101 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
+using Common.Net.Utils;
+using Common.Net.Utils.CustomException;
+using Microsoft.AspNetCore.Mvc;
+using Sat.Recruitment.Api.ViewModels;
+using Sat.Recruitment.Business.Interfaces;
+using Sat.Recruitment.Domain.Entities;
+using Sat.Recruitment.Domain.Enumerartions;
 
 namespace Sat.Recruitment.Api.Controllers
 {
-    public class Result
-    {
-        public bool IsSuccess { get; set; }
-        public string Errors { get; set; }
-    }
-
     [ApiController]
     [Route("[controller]")]
     public partial class UsersController : ControllerBase
     {
+        private readonly IUserService userService;
 
-        private readonly List<User> _users = new List<User>();
-        public UsersController()
+        public UsersController(IUserService userService)
         {
+            this.userService = userService; 
+        }
+
+        [HttpGet]
+        [Route("/list-users")]
+        public IEnumerable<User> Get()
+        {
+            return userService.GetUsers();
+        }
+
+        [HttpGet]
+        [Route("/list-users2")]
+        public IEnumerable<User> Get2()
+        {
+            return GetUsers();
         }
 
         [HttpPost]
         [Route("/create-user")]
-        public async Task<Result> CreateUser(string name, string email, string address, string phone, string userType, string money)
+        public async Task<Result> CreateUser(UserVM userVM)
         {
-            var errors = "";
-
-            ValidateErrors(name, email, address, phone, ref errors);
-
-            if (errors != null && errors != "")
-                return new Result()
-                {
-                    IsSuccess = false,
-                    Errors = errors
-                };
-
-            var newUser = new User
-            {
-                Name = name,
-                Email = email,
-                Address = address,
-                Phone = phone,
-                UserType = userType,
-                Money = decimal.Parse(money)
-            };
-
-            if (newUser.UserType == "Normal")
-            {
-                if (decimal.Parse(money) > 100)
-                {
-                    var percentage = Convert.ToDecimal(0.12);
-                    //If new user is normal and has more than USD100
-                    var gif = decimal.Parse(money) * percentage;
-                    newUser.Money = newUser.Money + gif;
-                }
-                if (decimal.Parse(money) < 100)
-                {
-                    if (decimal.Parse(money) > 10)
-                    {
-                        var percentage = Convert.ToDecimal(0.8);
-                        var gif = decimal.Parse(money) * percentage;
-                        newUser.Money = newUser.Money + gif;
-                    }
-                }
-            }
-            if (newUser.UserType == "SuperUser")
-            {
-                if (decimal.Parse(money) > 100)
-                {
-                    var percentage = Convert.ToDecimal(0.20);
-                    var gif = decimal.Parse(money) * percentage;
-                    newUser.Money = newUser.Money + gif;
-                }
-            }
-            if (newUser.UserType == "Premium")
-            {
-                if (decimal.Parse(money) > 100)
-                {
-                    var gif = decimal.Parse(money) * 2;
-                    newUser.Money = newUser.Money + gif;
-                }
-            }
-
-
-            var reader = ReadUsersFromFile();
-
-            //Normalize email
-            var aux = newUser.Email.Split(new char[] { '@' }, StringSplitOptions.RemoveEmptyEntries);
-
-            var atIndex = aux[0].IndexOf("+", StringComparison.Ordinal);
-
-            aux[0] = atIndex < 0 ? aux[0].Replace(".", "") : aux[0].Replace(".", "").Remove(atIndex);
-
-            newUser.Email = string.Join("@", new string[] { aux[0], aux[1] });
-
-            while (reader.Peek() >= 0)
-            {
-                var line = reader.ReadLineAsync().Result;
-                var user = new User
-                {
-                    Name = line.Split(',')[0].ToString(),
-                    Email = line.Split(',')[1].ToString(),
-                    Phone = line.Split(',')[2].ToString(),
-                    Address = line.Split(',')[3].ToString(),
-                    UserType = line.Split(',')[4].ToString(),
-                    Money = decimal.Parse(line.Split(',')[5].ToString()),
-                };
-                _users.Add(user);
-            }
-            reader.Close();
             try
             {
-                var isDuplicated = false;
-                foreach (var user in _users)
-                {
-                    if (user.Email == newUser.Email
-                        ||
-                        user.Phone == newUser.Phone)
-                    {
-                        isDuplicated = true;
-                    }
-                    else if (user.Name == newUser.Name)
-                    {
-                        if (user.Address == newUser.Address)
-                        {
-                            isDuplicated = true;
-                            throw new Exception("User is duplicated");
-                        }
+                var response = await userService.CreateUser(userVM.ToEntityModel());
 
-                    }
-                }
-
-                if (!isDuplicated)
-                {
-                    Debug.WriteLine("User Created");
-
-                    return new Result()
-                    {
-                        IsSuccess = true,
-                        Errors = "User Created"
-                    };
-                }
-                else
-                {
-                    Debug.WriteLine("The user is duplicated");
-
-                    return new Result()
-                    {
-                        IsSuccess = false,
-                        Errors = "The user is duplicated"
-                    };
-                }
+                return new Result(true, response.ToString());
             }
-            catch
+            
+            // NOTE: error validation has must be implemented in a custom ExceptionFilterAttribute (logging the error!)
+            catch (BusinessException be)
             {
-                Debug.WriteLine("The user is duplicated");
-                return new Result()
-                {
-                    IsSuccess = false,
-                    Errors = "The user is duplicated"
-                };
+                return new Result(false, string.Join("\n", be.Errors.Select(x => x.Description).ToList()));
             }
-
-            return new Result()
+            catch (Exception ex)
             {
-                IsSuccess = true,
-                Errors = "User Created"
-            };
+                return new Result(false, ex.Message);
+            }
         }
 
-        //Validate errors
-        private void ValidateErrors(string name, string email, string address, string phone, ref string errors)
+        private List<User> GetUsers()
         {
-            if (name == null)
-                //Validate if Name is null
-                errors = "The name is required";
-            if (email == null)
-                //Validate if Email is null
-                errors = errors + " The email is required";
-            if (address == null)
-                //Validate if Address is null
-                errors = errors + " The address is required";
-            if (phone == null)
-                //Validate if Phone is null
-                errors = errors + " The phone is required";
+            var users = new List<User>();
+
+            using (var reader = ReadUsersFromFile())
+            {
+                while (reader.Peek() >= 0)
+                {
+                    var line = reader.ReadLineAsync().Result;
+
+                    var user = new User(line.Split(',')[0], // name
+                                        line.Split(',')[1], // email
+                                        line.Split(',')[2], // address
+                                        line.Split(',')[3], // phone
+                                        line.Split(',')[4] == EnumsUtils.GetDescriptionAttribute(UserType.Normal) ? UserType.Normal : UserType.SuperUser, // type
+                                        decimal.Parse(line.Split(',')[5])); // money
+
+                    users.Add(user);
+                }
+            }
+            
+            return users;
         }
     }
-    public class User
+
+    // NOTE: this class is not required with a custom filter
+    public class Result
     {
-        public string Name { get; set; }
-        public string Email { get; set; }
-        public string Address { get; set; }
-        public string Phone { get; set; }
-        public string UserType { get; set; }
-        public decimal Money { get; set; }
+        public bool IsSuccess { get; set; }
+        public string Messages { get; set; }
+
+        public Result() { }
+
+        public Result(bool isSuccess, string messages) : this()
+        {
+            IsSuccess = isSuccess;
+            Messages = messages;
+        }
     }
 }

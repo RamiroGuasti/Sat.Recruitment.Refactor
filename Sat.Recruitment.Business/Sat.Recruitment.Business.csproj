@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Common.Net.Utils\Common.Net.Utils.csproj" />
+    <ProjectReference Include="..\Sat.Recruitment.DataAccess\Sat.Recruitment.DataAccess.csproj" />
+    <ProjectReference Include="..\Sat.Recruitment.Domain\Sat.Recruitment.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Interfaces\Base\" />
+    <Folder Include="Services\Base\" />
+  </ItemGroup>
+
+</Project>

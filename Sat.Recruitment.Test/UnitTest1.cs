@@ -1,10 +1,8 @@
-using System;
-using System.Dynamic;
-
-using Microsoft.AspNetCore.Mvc;
-
+using Moq;
 using Sat.Recruitment.Api.Controllers;
-
+using Sat.Recruitment.Api.ViewModels;
+using Sat.Recruitment.Business.Interfaces;
+using Sat.Recruitment.Domain.Enumerartions;
 using Xunit;
 
 namespace Sat.Recruitment.Test
@@ -12,28 +10,32 @@ namespace Sat.Recruitment.Test
     [CollectionDefinition("Tests", DisableParallelization = true)]
     public class UnitTest1
     {
+        private Mock<IUserService> mockUserService;
+
         [Fact]
         public void Test1()
         {
-            var userController = new UsersController();
+            mockUserService = new Mock<IUserService>();
 
-            var result = userController.CreateUser("Mike", "mike@gmail.com", "Av. Juan G", "+349 1122354215", "Normal", "124").Result;
+            var userController = new UsersController(mockUserService.Object);
 
+            var result = userController.CreateUser(new UserVM("Mike", "mike@gmail.com", "Av. Juan G", "+349 1122354215", UserType.Normal, 100)).Result;
 
-            Assert.Equal(true, result.IsSuccess);
-            Assert.Equal("User Created", result.Errors);
+            Assert.True(result.IsSuccess);
+            Assert.Equal("User Created", result.Messages);
         }
 
         [Fact]
         public void Test2()
         {
-            var userController = new UsersController();
+            mockUserService = new Mock<IUserService>();
 
-            var result = userController.CreateUser("Agustina", "Agustina@gmail.com", "Av. Juan G", "+349 1122354215", "Normal", "124").Result;
+            var userController = new UsersController(mockUserService.Object);
 
+            var result = userController.CreateUser(new UserVM("Agustina", "Agustina@gmail.com", "Av. Juan G", "+349 1122354215", UserType.Normal, 200)).Result;
 
-            Assert.Equal(false, result.IsSuccess);
-            Assert.Equal("The user is duplicated", result.Errors);
+            Assert.False(result.IsSuccess);
+            Assert.Equal("The user is duplicated", result.Messages);
         }
     }
 }
