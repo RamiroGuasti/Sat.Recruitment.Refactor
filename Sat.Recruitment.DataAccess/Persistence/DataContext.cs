@@ -18,7 +18,7 @@ namespace Sat.Recruitment.DataAccess.Persistence.Context
 
         private static readonly string connectionString = ConfigurationManager.ConnectionStrings["SatDB"]?.ToString() ?? testConnection;
 
-        #region Propago Entities
+        #region Entities
 
         public virtual IDbSet<User> User { get; set; }
 

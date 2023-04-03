@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Common.Net.Utils.AppSettings;
@@ -7,7 +6,6 @@ using Common.Net.Utils.CustomException.Base;
 using Sat.Recruitment.Business.Interfaces;
 using Sat.Recruitment.Business.Services.Base;
 using Sat.Recruitment.DataAccess.Interfaces;
-using Sat.Recruitment.DataAccess.Persistence.Context;
 using Sat.Recruitment.Domain.Entities;
 using Sat.Recruitment.Domain.Enumerartions;
 
@@ -15,11 +13,6 @@ namespace Sat.Recruitment.Business.Services
 {
     public class UserService : BaseEntityService<User>, IUserService
     {
-        //// NOTE: this constructor if only for test, the inyection resolve isn't implement in Business layer
-        //public UserService() : base(new DataContext())
-        //{
-        //}
-
         public UserService(IDataContext dataContext) : base(dataContext)
         {
         }
